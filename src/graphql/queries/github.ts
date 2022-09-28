@@ -10,8 +10,9 @@ type PullRequestsNode = {
       commit: {
         status: {
           state: string;
-        };
+        } | null;
         checkSuites: {
+          totalCount: number;
           nodes: {
             conclusion: string;
             app: {
@@ -32,7 +33,19 @@ export interface FetchGitHubQueryResult {
   };
 }
 
-export const FetchGitHubQuery = gql`
+export interface SearchRepositoriesResult {
+  search: {
+    nodes: {
+      nameWithOwner: string;
+      stargazerCount: number;
+      pullRequests: {
+        nodes: PullRequestsNode[];
+      };
+    }[];
+  };
+}
+
+export const fetchGitHubQuery = gql`
   query FetchGitHub(
     $REPO_NAME: String!
     $REPO_OWNER: String!
@@ -51,18 +64,45 @@ export const FetchGitHubQuery = gql`
                   state
                 }
                 checkSuites(first: 100) {
+                  totalCount
                   nodes {
                     conclusion
                     app {
                       name
                     }
-                    # checkRuns(first: 100) {
-                    #   nodes {
-                    #     name
-                    #     conclusion
-                    #     permalink
-                    #   }
-                    # }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const searchRepositoriesQuery = gql`
+  query searchRepositories($NUM_OF_REPOS: Int!) {
+    search(
+      first: $NUM_OF_REPOS
+      query: "stars:>50000 sort:stars language:javascript language:typescript"
+      type: REPOSITORY
+    ) {
+      nodes {
+        ... on Repository {
+          nameWithOwner
+          stargazerCount
+          pullRequests(last: 1, states: [CLOSED, MERGED]) {
+            nodes {
+              commits(last: 1) {
+                nodes {
+                  commit {
+                    status {
+                      state
+                    }
+                    checkSuites(first: 100) {
+                      totalCount
+                    }
                   }
                 }
               }

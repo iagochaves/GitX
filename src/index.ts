@@ -1,20 +1,27 @@
+/* eslint-disable no-restricted-syntax */
 import {
-  FetchGitHubQuery,
+  fetchGitHubQuery,
   FetchGitHubQueryResult,
+  searchRepositoriesQuery,
+  SearchRepositoriesResult,
 } from './graphql/queries/github';
-import client from './util/graphqlClient';
+import client from './lib/graphqlClient';
 
 const SUCCESS_KEY = 'SUCCESS';
 
-const fetchPullRequests = async () => {
-  const data = await client.request<FetchGitHubQueryResult>(FetchGitHubQuery, {
-    REPO_NAME: 'aws-sdk-js-v3',
-    REPO_OWNER: 'aws',
-    NUMBER_OF_PRS: 10,
+const fetchPullRequests = async (repoOwner: string, repoName: string) => {
+  console.log('Fetching Repo for: ', `${repoOwner}/${repoName}`);
+  const data = await client.request<FetchGitHubQueryResult>(fetchGitHubQuery, {
+    REPO_NAME: repoName,
+    REPO_OWNER: repoOwner,
+    NUMBER_OF_PRS: 100,
   });
 
   let numOfMerged = 0;
   let numOfFailures = 0;
+
+  let mergedPRWithoutActions = 0;
+  let closedPRWithoutActions = 0;
 
   let mergedPRWithSucceedCommits = 0;
   const mergedPRWithSucceedCommitsArray: number[] = [];
@@ -38,7 +45,17 @@ const fetchPullRequests = async () => {
     }
 
     pullRequest.commits.nodes.forEach(({ commit }) => {
-      const hasExternalCIcommitSucceeded = commit.status.state === SUCCESS_KEY;
+      // Check if a PR has GitHub Actions (status == null)
+      const hasExternalCIcommitSucceeded = commit.status?.state === SUCCESS_KEY;
+
+      if (!commit.status && !commit.checkSuites.totalCount) {
+        if (isPrMerged) {
+          mergedPRWithoutActions += 1;
+          return;
+        }
+        closedPRWithoutActions += 1;
+        return;
+      }
 
       const hasActionsSucceeded = commit.checkSuites.nodes.every(
         (checkSuite) => checkSuite.conclusion === SUCCESS_KEY,
@@ -70,34 +87,51 @@ const fetchPullRequests = async () => {
     });
   });
 
-  console.log('-------------BEGIN STATUS-------------');
-  console.log('Number of Merged PR: ', numOfMerged);
-  console.log('Number of Failed PR: ', numOfFailures);
-  console.log(
-    'Merged PR With Succeed Commits: ',
-    mergedPRWithSucceedCommits,
-    '\t',
-    mergedPRWithSucceedCommitsArray,
-  );
-  console.log(
-    'Merged PR With Failed Commits: ',
-    mergedPRWithFailedCommits,
-    '\t',
-    mergedPRWithFailedCommitsArray,
-  );
-  console.log(
-    'Closed PR With Succeed Commits: ',
-    closedPRWithSucceedCommits,
-    '\t',
-    closedPRWithSucceedCommitsArray,
-  );
-  console.log(
-    'Closed PR With Failed Commits: ',
-    closedPRWithFailedCommits,
-    '\t',
-    closedPRWithFailedCommitsArray,
-  );
-  console.log('-------------END STATUS-------------');
+  const dataStatus = {
+    name: `${repoOwner}/${repoName}`,
+    'Number of Merged PR': numOfMerged,
+    'Number of Failed PR': numOfFailures,
+    'Merged PR With Succeed Commits': mergedPRWithSucceedCommits,
+    // 'Merged PR With Succeed Commits Array': `[${mergedPRWithSucceedCommitsArray}]`,
+    'Merged PR With Failed Commits': mergedPRWithFailedCommits,
+    'Closed PR With Succeed Commits': closedPRWithSucceedCommits,
+    'Closed PR With Failed Commits': closedPRWithFailedCommits,
+    'Merged PR W/O Actions': mergedPRWithoutActions,
+    'Closed PR W/O Actions': closedPRWithoutActions,
+  };
+
+  return dataStatus;
 };
 
-fetchPullRequests();
+async function* processRepositories() {
+  console.log('Fetching Repos');
+
+  const { search } = await client.request<SearchRepositoriesResult>(
+    searchRepositoriesQuery,
+    {
+      NUM_OF_REPOS: 100,
+    },
+  );
+
+  for (const node of search.nodes) {
+    const nextPullRequest = {
+      name: node.nameWithOwner,
+      stars: node.stargazerCount,
+    };
+    yield nextPullRequest;
+  }
+}
+
+async function main(): Promise<void> {
+  for await (const data of processRepositories()) {
+    const [repoOwner, repoName] = data.name.split('/');
+    fetchPullRequests(repoOwner, repoName).then((response) => {
+      console.table(response);
+    });
+  }
+  console.log('FINISH SCRIPT');
+}
+
+main();
+
+// fetchPullRequests();
