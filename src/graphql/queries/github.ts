@@ -49,10 +49,10 @@ export const fetchGitHubQuery = gql`
   query FetchGitHub(
     $REPO_NAME: String!
     $REPO_OWNER: String!
-    $NUMBER_OF_PRS: Int!
+    $NUM_OF_PRS: Int!
   ) {
     repository(name: $REPO_NAME, owner: $REPO_OWNER) {
-      pullRequests(states: [CLOSED, MERGED], last: $NUMBER_OF_PRS) {
+      pullRequests(states: [CLOSED, MERGED], last: $NUM_OF_PRS) {
         nodes {
           number
           merged
@@ -85,29 +85,29 @@ export const searchRepositoriesQuery = gql`
   query searchRepositories($NUM_OF_REPOS: Int!) {
     search(
       first: $NUM_OF_REPOS
-      query: "stars:>50000 sort:stars language:javascript language:typescript"
+      query: "stars:>30000 sort:stars language:javascript language:typescript"
       type: REPOSITORY
     ) {
       nodes {
         ... on Repository {
           nameWithOwner
           stargazerCount
-          pullRequests(last: 1, states: [CLOSED, MERGED]) {
-            nodes {
-              commits(last: 1) {
-                nodes {
-                  commit {
-                    status {
-                      state
-                    }
-                    checkSuites(first: 100) {
-                      totalCount
-                    }
-                  }
-                }
-              }
-            }
-          }
+          # pullRequests(last: 1, states: [CLOSED, MERGED]) {
+          #   nodes {
+          #     commits(last: 1) {
+          #       nodes {
+          #         commit {
+          #           status {
+          #             state
+          #           }
+          #           checkSuites(first: 100) {
+          #             totalCount
+          #           }
+          #         }
+          #       }
+          #     }
+          #   }
+          # }
         }
       }
     }

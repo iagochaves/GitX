@@ -1,4 +1,6 @@
 /* eslint-disable no-restricted-syntax */
+import fs from 'node:fs';
+import { resolve } from 'node:path';
 import {
   fetchGitHubQuery,
   FetchGitHubQueryResult,
@@ -7,15 +9,18 @@ import {
 } from './graphql/queries/github';
 import client from './lib/graphqlClient';
 
-const SUCCESS_KEY = 'SUCCESS';
+const NUM_OF_REPOS = 100;
+const NUM_OF_PRS = 100;
 
-const fetchPullRequests = async (repoOwner: string, repoName: string) => {
+async function fetchPullRequests(repoOwner: string, repoName: string) {
   console.log('Fetching Repo for: ', `${repoOwner}/${repoName}`);
   const data = await client.request<FetchGitHubQueryResult>(fetchGitHubQuery, {
     REPO_NAME: repoName,
     REPO_OWNER: repoOwner,
-    NUMBER_OF_PRS: 100,
+    NUM_OF_PRS,
   });
+
+  const SUCCESS_KEY = 'SUCCESS';
 
   let numOfMerged = 0;
   let numOfFailures = 0;
@@ -101,7 +106,7 @@ const fetchPullRequests = async (repoOwner: string, repoName: string) => {
   };
 
   return dataStatus;
-};
+}
 
 async function* processRepositories() {
   console.log('Fetching Repos');
@@ -109,7 +114,7 @@ async function* processRepositories() {
   const { search } = await client.request<SearchRepositoriesResult>(
     searchRepositoriesQuery,
     {
-      NUM_OF_REPOS: 100,
+      NUM_OF_REPOS,
     },
   );
 
@@ -123,15 +128,33 @@ async function* processRepositories() {
 }
 
 async function main(): Promise<void> {
+  console.time(`Script Timer`);
+  let repoCounter = 0;
+  const writableStream = fs.createWriteStream(
+    resolve(__dirname, 'generated', 'test.txt'),
+  );
+
   for await (const data of processRepositories()) {
     const [repoOwner, repoName] = data.name.split('/');
+    // eslint-disable-next-line no-loop-func
     fetchPullRequests(repoOwner, repoName).then((response) => {
-      console.table(response);
+      writableStream.write(`${JSON.stringify(response, null, 4)}\n`);
+      repoCounter += 1;
+
+      if (repoCounter === NUM_OF_REPOS) {
+        writableStream.end();
+      }
     });
   }
-  console.log('FINISH SCRIPT');
+  writableStream.on('finish', () => {
+    console.timeEnd(`Script Timer`);
+  });
 }
 
 main();
-
 // fetchPullRequests();
+// console.log(
+//   `Im running`,
+//   process.pid,
+//   `default threads: ${nodejsDefaultThreadNumber}`,
+// );
