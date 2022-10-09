@@ -27,6 +27,7 @@
     "typescript": "*"
   },
   "dependencies": {
+    "csv-stringify": "^6.2.0",
     "dotenv": "^16.0.2",
     "graphql": "^16.6.0",
     "graphql-request": "^5.0.0"

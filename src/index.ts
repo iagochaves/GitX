@@ -1,11 +1,10 @@
 /* eslint-disable no-restricted-syntax */
+import { stringify } from 'csv-stringify';
 import fs from 'node:fs';
 import { resolve } from 'node:path';
 import {
   fetchGitHubQuery,
   FetchGitHubQueryResult,
-  searchRepositoriesQuery,
-  SearchRepositoriesResult,
 } from './graphql/queries/github';
 import client from './lib/graphqlClient';
 
@@ -109,52 +108,52 @@ async function fetchPullRequests(repoOwner: string, repoName: string) {
 }
 
 async function* processRepositories() {
-  console.log('Fetching Repos');
+  // const { search } = await client.request<SearchRepositoriesResult>(
+  //   searchRepositoriesQuery,
+  //   {
+  //     NUM_OF_REPOS,
+  //   },
+  // );
 
-  const { search } = await client.request<SearchRepositoriesResult>(
-    searchRepositoriesQuery,
-    {
-      NUM_OF_REPOS,
-    },
+  const reposFileData = fs.readFileSync(
+    resolve(__dirname, 'documents', 'repos.txt'),
+    { encoding: 'utf8' },
   );
 
-  for (const node of search.nodes) {
-    const nextPullRequest = {
-      name: node.nameWithOwner,
-      stars: node.stargazerCount,
-    };
-    yield nextPullRequest;
+  const reposData = reposFileData.toString().split('\n');
+
+  for (const repo of reposData) {
+    yield repo;
   }
+
+  // for (const node of search.nodes) {
+  //   const nextPullRequest = {
+  //     name: node.nameWithOwner,
+  //     stars: node.stargazerCount,
+  //   };
+  //   yield nextPullRequest;
+  // }
 }
 
 async function main(): Promise<void> {
-  console.time(`Script Timer`);
   let repoCounter = 0;
   const writableStream = fs.createWriteStream(
-    resolve(__dirname, 'generated', 'test.txt'),
+    resolve(__dirname, 'documents/generated', 'generated.csv'),
   );
+  const stringifier = stringify({ header: true });
 
   for await (const data of processRepositories()) {
-    const [repoOwner, repoName] = data.name.split('/');
+    const [repoOwner, repoName] = data.split('/');
     // eslint-disable-next-line no-loop-func
     fetchPullRequests(repoOwner, repoName).then((response) => {
-      writableStream.write(`${JSON.stringify(response, null, 4)}\n`);
       repoCounter += 1;
+      stringifier.write(response);
 
       if (repoCounter === NUM_OF_REPOS) {
-        writableStream.end();
+        stringifier.pipe(writableStream, { end: true });
       }
     });
   }
-  writableStream.on('finish', () => {
-    console.timeEnd(`Script Timer`);
-  });
 }
 
 main();
-// fetchPullRequests();
-// console.log(
-//   `Im running`,
-//   process.pid,
-//   `default threads: ${nodejsDefaultThreadNumber}`,
-// );
