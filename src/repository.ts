@@ -30,7 +30,7 @@ export class Repository {
     this.NUM_OF_TOTAL_REPOS = reposData.length;
 
     for (const repo of reposData) {
-      yield repo;
+      yield repo.trim();
     }
   }
 

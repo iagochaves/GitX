@@ -7,12 +7,10 @@ async function main(): Promise<void> {
   const repository = new Repository();
 
   for await (const data of repository.readRepositories()) {
-    const [repoOwner, repoName] = data.split('/');
-
     const pullRequest = new PullRequest(NUM_OF_PRS);
 
     pullRequest
-      .fetchPullRequest(repoOwner, repoName)
+      .fetchPullRequest(data)
       .then((response) => repository.writePullRequestResult(response));
   }
 }

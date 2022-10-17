@@ -1,10 +1,7 @@
 import { gql } from 'graphql-request';
 
 type PullRequestsNode = {
-  number: number;
-  merged: string;
-  title: string;
-
+  merged: boolean;
   commits: {
     nodes: {
       commit: {
@@ -17,7 +14,7 @@ type PullRequestsNode = {
             conclusion: string;
             app: {
               name: string;
-            };
+            } | null;
           }[];
         };
       };
@@ -25,11 +22,13 @@ type PullRequestsNode = {
   };
 };
 
-export interface FetchGitHubQueryResult {
-  repository: {
-    pullRequests: {
-      nodes: PullRequestsNode[];
-    };
+export interface SearchPullRequestResult {
+  search: {
+    issueCount: number;
+    edges: {
+      cursor: string;
+      node: PullRequestsNode;
+    }[];
   };
 }
 
@@ -45,30 +44,30 @@ export interface SearchRepositoriesResult {
   };
 }
 
-export const fetchGitHubQuery = gql`
-  query FetchGitHub(
-    $REPO_NAME: String!
-    $REPO_OWNER: String!
-    $NUM_OF_PRS: Int!
-  ) {
-    repository(name: $REPO_NAME, owner: $REPO_OWNER) {
-      pullRequests(states: [CLOSED, MERGED], last: $NUM_OF_PRS) {
-        nodes {
-          number
-          merged
-          title
-          commits(last: 1) {
-            nodes {
-              commit {
-                status {
-                  state
-                }
-                checkSuites(first: 100) {
-                  totalCount
-                  nodes {
-                    conclusion
-                    app {
-                      name
+export const searchPullRequest = gql`
+  query SearchPullRequest($QUERY: String!, $NUM_OF_PRS: Int!, $CURSOR: String) {
+    search(query: $QUERY, type: ISSUE, first: $NUM_OF_PRS, after: $CURSOR) {
+      issueCount
+      edges {
+        cursor
+        node {
+          ... on PullRequest {
+            number
+            merged
+            title
+            commits(last: 1) {
+              nodes {
+                commit {
+                  status {
+                    state
+                  }
+                  checkSuites(first: 100) {
+                    totalCount
+                    nodes {
+                      conclusion
+                      app {
+                        name
+                      }
                     }
                   }
                 }

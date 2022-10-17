@@ -1,21 +1,10 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-param-reassign */
 import {
-  fetchGitHubQuery,
-  FetchGitHubQueryResult,
+  searchPullRequest,
+  SearchPullRequestResult,
 } from './graphql/queries/github';
 import client from './lib/graphqlClient';
-
-// export interface PullRequestData {
-//   name: string;
-//   'Number of Merged PR': number;
-//   'Number of Failed PR': number;
-//   'Merged PR With Succeed Commits': number;
-//   'Merged PR With Failed Commits': number;
-//   'Closed PR With Succeed Commits': number;
-//   'Closed PR With Failed Commits': number;
-//   'Merged PR W/O Actions': number;
-//   'Closed PR W/O Actions': number;
-// }
 
 type PullRequestStatuses = {
   WITH_FAILED_COMMITS: number;
@@ -24,6 +13,8 @@ type PullRequestStatuses = {
   WITH_SUCCESS_COMMITS: number;
   WITHOUT_CI: number;
 };
+const SUCCESS_KEY = 'SUCCESS';
+const GITHUB_ACTIONS_KEY = 'GitHub Actions';
 
 export class PullRequest {
   private NUM_OF_PRS: number;
@@ -35,6 +26,8 @@ export class PullRequest {
   private NUM_OF_MERGED_PR_STATUSES: PullRequestStatuses;
 
   private NUM_OF_CLOSED_PR_STATUSES: PullRequestStatuses;
+
+  private NEXT_CURSOR: string | null = null;
 
   constructor(numOfPrs: number) {
     this.NUM_OF_PRS = numOfPrs;
@@ -55,31 +48,40 @@ export class PullRequest {
     };
   }
 
-  async fetchPullRequest(repoOwner: string, repoName: string) {
-    console.log(`Proccessing -> ${repoOwner}/${repoName}`);
-    const data = await client.request<FetchGitHubQueryResult>(
-      fetchGitHubQuery,
+  async proccessNextPullRequest(repository: string) {
+    console.log('Fetching for ->', this.NEXT_CURSOR);
+    const data = await client.request<SearchPullRequestResult>(
+      searchPullRequest,
       {
-        REPO_NAME: repoName,
-        REPO_OWNER: repoOwner,
+        QUERY: `NOT docs is:pr is:closed repo:${repository} comments:>=1`,
         NUM_OF_PRS: this.NUM_OF_PRS,
+        CURSOR: this.NEXT_CURSOR,
       },
     );
 
-    const SUCCESS_KEY = 'SUCCESS';
-    const GITHUB_ACTIONS_KEY = 'GitHub Actions';
-    data.repository.pullRequests.nodes.forEach((pullRequest) => {
-      const isPrMerged = pullRequest.merged;
+    // If end of query, set Null
+    if (!data.search.edges.length) {
+      this.NEXT_CURSOR = null;
+      return;
+    }
 
-      if (isPrMerged) {
-        this.NUM_OF_MERGED_PR += 1;
-      } else {
-        this.NUM_OF_FAILED_PR += 1;
-      }
+    data.search.edges.forEach(
+      ({ cursor, node: { commits, merged } }, nodeIndex) => {
+        // If is the last Item, set NEXT_CURSOR to the current reference
+        if (nodeIndex + 1 === data.search.edges.length) {
+          this.NEXT_CURSOR = cursor;
+        }
+        const [node] = commits.nodes;
 
-      const [node] = pullRequest.commits.nodes;
+        // If does not have any commit, ignore
+        if (!node) return;
 
-      if (node?.commit) {
+        if (merged) {
+          this.NUM_OF_MERGED_PR += 1;
+        } else {
+          this.NUM_OF_FAILED_PR += 1;
+        }
+
         const isUsingExternalCI = !!node.commit.status?.state;
 
         const filteredCheckSuites = node.commit.checkSuites.nodes.filter(
@@ -95,11 +97,11 @@ export class PullRequest {
 
         const processPRStatuses = (PrObject: PullRequestStatuses) => {
           // Checks Merged - Closed Statuses
-          // Check if not using both CIs
-          // 1 - Using External CI && Using Actions
-          // 2 - Using External CI && Not Using Actions
-          // 3 - Not Using External CI && Using Actions
-          // 4 - Not Using External CI && Not Using Actions
+          // 1- Check if not using both CIs
+          // 2 - Using External CI && Using Actions
+          // 3 - Using External CI && Not Using Actions
+          // 4 - Not Using External CI && Using Actions
+          // 5 - Not Using External CI && Not Using Actions
 
           if (!isUsingExternalCI && !filteredCheckSuites.length) {
             PrObject.WITHOUT_CI += 1;
@@ -114,17 +116,22 @@ export class PullRequest {
           }
         };
 
-        if (isPrMerged) {
+        if (merged) {
           processPRStatuses(this.NUM_OF_MERGED_PR_STATUSES);
           return;
         }
-
         processPRStatuses(this.NUM_OF_CLOSED_PR_STATUSES);
-      }
-    });
+      },
+    );
+  }
+
+  async fetchPullRequest(repository: string) {
+    do {
+      await this.proccessNextPullRequest(repository);
+    } while (this.NEXT_CURSOR);
 
     return {
-      name: `${repoOwner}/${repoName}`,
+      repository,
       'Number of Merged PR': this.NUM_OF_MERGED_PR,
       'Number of Failed PR': this.NUM_OF_FAILED_PR,
 
