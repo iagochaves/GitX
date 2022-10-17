@@ -2,7 +2,6 @@
 import { Stringifier, stringify } from 'csv-stringify';
 import fs from 'node:fs';
 import { resolve } from 'node:path';
-import { PullRequestData } from './pullRequest';
 
 export class Repository {
   private REPO_COUNTER = 0;
@@ -27,7 +26,7 @@ export class Repository {
       { encoding: 'utf8' },
     );
 
-    const reposData = reposFileData.toString().split('\n');
+    const reposData = reposFileData.toString().trim().split('\n');
     this.NUM_OF_TOTAL_REPOS = reposData.length;
 
     for (const repo of reposData) {
@@ -35,7 +34,7 @@ export class Repository {
     }
   }
 
-  writePullRequestResult(pullRequestData: PullRequestData) {
+  writePullRequestResult(pullRequestData: any) {
     this.REPO_COUNTER += 1;
     this.stringifier.write(pullRequestData);
 

@@ -92,22 +92,6 @@ export const searchRepositoriesQuery = gql`
         ... on Repository {
           nameWithOwner
           stargazerCount
-          # pullRequests(last: 1, states: [CLOSED, MERGED]) {
-          #   nodes {
-          #     commits(last: 1) {
-          #       nodes {
-          #         commit {
-          #           status {
-          #             state
-          #           }
-          #           checkSuites(first: 100) {
-          #             totalCount
-          #           }
-          #         }
-          #       }
-          #     }
-          #   }
-          # }
         }
       }
     }

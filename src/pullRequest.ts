@@ -1,20 +1,29 @@
+/* eslint-disable no-param-reassign */
 import {
   fetchGitHubQuery,
   FetchGitHubQueryResult,
 } from './graphql/queries/github';
 import client from './lib/graphqlClient';
 
-export interface PullRequestData {
-  name: string;
-  'Number of Merged PR': number;
-  'Number of Failed PR': number;
-  'Merged PR With Succeed Commits': number;
-  'Merged PR With Failed Commits': number;
-  'Closed PR With Succeed Commits': number;
-  'Closed PR With Failed Commits': number;
-  'Merged PR W/O Actions': number;
-  'Closed PR W/O Actions': number;
-}
+// export interface PullRequestData {
+//   name: string;
+//   'Number of Merged PR': number;
+//   'Number of Failed PR': number;
+//   'Merged PR With Succeed Commits': number;
+//   'Merged PR With Failed Commits': number;
+//   'Closed PR With Succeed Commits': number;
+//   'Closed PR With Failed Commits': number;
+//   'Merged PR W/O Actions': number;
+//   'Closed PR W/O Actions': number;
+// }
+
+type PullRequestStatuses = {
+  WITH_FAILED_COMMITS: number;
+  WITH_ONLY_ACTIONS_CI: number;
+  WITH_ONLY_EXTERNAL_CI: number;
+  WITH_SUCCESS_COMMITS: number;
+  WITHOUT_CI: number;
+};
 
 export class PullRequest {
   private NUM_OF_PRS: number;
@@ -23,26 +32,26 @@ export class PullRequest {
 
   private NUM_OF_FAILED_PR = 0;
 
-  private NUM_OF_MERGED_PR_WITHOUT_ACTIONS = 0;
+  private NUM_OF_MERGED_PR_STATUSES: PullRequestStatuses;
 
-  private NUM_OF_CLOSED_PR_WITHOUT_ACTIONS = 0;
-
-  private NUM_OF_MERGED_PR_WITH_SUCCESS_COMMITS = 0;
-
-  private NUM_OF_MERGED_PR_WITH_FAILED_COMMITS = 0;
-
-  private NUM_OF_CLOSED_PR_WITH_SUCCESS_COMMITS = 0;
-
-  private NUM_OF_CLOSED_PR_WITH_FAILED_COMMITS = 0;
+  private NUM_OF_CLOSED_PR_STATUSES: PullRequestStatuses;
 
   constructor(numOfPrs: number) {
     this.NUM_OF_PRS = numOfPrs;
+
+    const initialPRStatuses: PullRequestStatuses = {
+      WITH_FAILED_COMMITS: 0,
+      WITH_ONLY_ACTIONS_CI: 0,
+      WITH_ONLY_EXTERNAL_CI: 0,
+      WITH_SUCCESS_COMMITS: 0,
+      WITHOUT_CI: 0,
+    };
+
+    this.NUM_OF_MERGED_PR_STATUSES = initialPRStatuses;
+    this.NUM_OF_CLOSED_PR_STATUSES = initialPRStatuses;
   }
 
-  async fetchPullRequest(
-    repoOwner: string,
-    repoName: string,
-  ): Promise<PullRequestData> {
+  async fetchPullRequest(repoOwner: string, repoName: string) {
     console.log(`Proccessing -> ${repoOwner}/${repoName}`);
     const data = await client.request<FetchGitHubQueryResult>(
       fetchGitHubQuery,
@@ -54,7 +63,7 @@ export class PullRequest {
     );
 
     const SUCCESS_KEY = 'SUCCESS';
-
+    const GITHUB_ACTIONS_KEY = 'GitHub Actions';
     data.repository.pullRequests.nodes.forEach((pullRequest) => {
       const isPrMerged = pullRequest.merged;
 
@@ -64,60 +73,85 @@ export class PullRequest {
         this.NUM_OF_FAILED_PR += 1;
       }
 
-      pullRequest.commits.nodes.forEach(({ commit }) => {
-        // Check if a PR has GitHub Actions (status == null)
-        const hasExternalCIcommitSucceeded =
-          commit.status?.state === SUCCESS_KEY;
+      const [node] = pullRequest.commits.nodes;
 
-        if (!commit.status && !commit.checkSuites.totalCount) {
-          if (isPrMerged) {
-            this.NUM_OF_MERGED_PR_WITHOUT_ACTIONS += 1;
-            return;
-          }
-          this.NUM_OF_CLOSED_PR_WITHOUT_ACTIONS += 1;
-          return;
-        }
+      if (node?.commit) {
+        const isUsingExternalCI = !!node.commit.status?.state;
 
-        const hasActionsSucceeded = commit.checkSuites.nodes.every(
-          (checkSuite) => checkSuite.conclusion === SUCCESS_KEY,
+        const isUsingActions = node.commit.checkSuites.nodes.some(
+          ({ app }) => app?.name === GITHUB_ACTIONS_KEY,
         );
 
-        const hasCommitSucceeded =
-          hasExternalCIcommitSucceeded && hasActionsSucceeded;
+        const hasExternalCISucceeded =
+          node.commit.status?.state === SUCCESS_KEY;
 
-        // Succeed Commits
-        if (hasCommitSucceeded) {
-          if (isPrMerged) {
-            this.NUM_OF_MERGED_PR_WITH_SUCCESS_COMMITS += 1;
+        const hasActionsSucceeded = node.commit.checkSuites.nodes.every(
+          ({ app, conclusion }) =>
+            app?.name === GITHUB_ACTIONS_KEY && conclusion === SUCCESS_KEY,
+        );
+
+        const processPRStatuses = (PrObject: PullRequestStatuses) => {
+          // Checks Merged - Closed Statuses
+          // Check if not using both CIs
+          // 1 - Using External CI && Using Actions
+          // 2 - Using External CI && Not Using Actions
+          // 3 - Not Using External CI && Using Actions
+          // 4 - Not Using External CI && Not Using Actions
+
+          if (!isUsingExternalCI && !isUsingActions) {
+            PrObject.WITHOUT_CI += 1;
             return;
           }
-          this.NUM_OF_CLOSED_PR_WITH_SUCCESS_COMMITS += 1;
-          return;
-        }
 
-        // Failed Commits
-        if (isPrMerged) {
-          this.NUM_OF_MERGED_PR_WITH_FAILED_COMMITS += 1;
-          return;
-        }
-        this.NUM_OF_CLOSED_PR_WITH_FAILED_COMMITS += 1;
-      });
+          if (hasExternalCISucceeded && hasActionsSucceeded) {
+            PrObject.WITH_SUCCESS_COMMITS += 1;
+            return;
+          }
+
+          if (hasExternalCISucceeded && !hasActionsSucceeded) {
+            PrObject.WITH_ONLY_EXTERNAL_CI += 1;
+            return;
+          }
+
+          if (!hasExternalCISucceeded && hasActionsSucceeded) {
+            PrObject.WITH_ONLY_ACTIONS_CI += 1;
+            return;
+          }
+
+          if (!hasExternalCISucceeded && !hasActionsSucceeded) {
+            PrObject.WITH_FAILED_COMMITS += 1;
+          }
+        };
+
+        if (isPrMerged) processPRStatuses(this.NUM_OF_MERGED_PR_STATUSES);
+        else processPRStatuses(this.NUM_OF_CLOSED_PR_STATUSES);
+      }
     });
 
     return {
       name: `${repoOwner}/${repoName}`,
       'Number of Merged PR': this.NUM_OF_MERGED_PR,
       'Number of Failed PR': this.NUM_OF_FAILED_PR,
-      'Merged PR With Succeed Commits':
-        this.NUM_OF_MERGED_PR_WITH_SUCCESS_COMMITS,
-      'Merged PR With Failed Commits':
-        this.NUM_OF_MERGED_PR_WITH_FAILED_COMMITS,
-      'Closed PR With Succeed Commits':
-        this.NUM_OF_CLOSED_PR_WITH_SUCCESS_COMMITS,
-      'Closed PR With Failed Commits':
-        this.NUM_OF_CLOSED_PR_WITH_FAILED_COMMITS,
-      'Merged PR W/O Actions': this.NUM_OF_MERGED_PR_WITHOUT_ACTIONS,
-      'Closed PR W/O Actions': this.NUM_OF_CLOSED_PR_WITHOUT_ACTIONS,
+
+      'Merged PR With Failed Commits using both':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_FAILED_COMMITS,
+      'Merged PR With Success Commits using both':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_SUCCESS_COMMITS,
+      'Merged PR With Only passing GitHub Actions':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_ACTIONS_CI,
+      'Merged PR With Only passing External CIs':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_EXTERNAL_CI,
+      'Merged PR With No CI': this.NUM_OF_MERGED_PR_STATUSES.WITHOUT_CI,
+
+      'Closed PR With Failed Commits using both':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_FAILED_COMMITS,
+      'Closed PR With Success Commits using both':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_SUCCESS_COMMITS,
+      'Closed PR With Only passing GitHub Actions':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_ACTIONS_CI,
+      'Closed PR With Only passing External CIs':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_EXTERNAL_CI,
+      'Closed PR With No CI': this.NUM_OF_CLOSED_PR_STATUSES.WITHOUT_CI,
     };
   }
 }
