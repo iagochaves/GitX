@@ -39,16 +39,20 @@ export class PullRequest {
   constructor(numOfPrs: number) {
     this.NUM_OF_PRS = numOfPrs;
 
-    const initialPRStatuses: PullRequestStatuses = {
+    this.NUM_OF_MERGED_PR_STATUSES = {
       WITH_FAILED_COMMITS: 0,
       WITH_ONLY_ACTIONS_CI: 0,
       WITH_ONLY_EXTERNAL_CI: 0,
       WITH_SUCCESS_COMMITS: 0,
       WITHOUT_CI: 0,
     };
-
-    this.NUM_OF_MERGED_PR_STATUSES = initialPRStatuses;
-    this.NUM_OF_CLOSED_PR_STATUSES = initialPRStatuses;
+    this.NUM_OF_CLOSED_PR_STATUSES = {
+      WITH_FAILED_COMMITS: 0,
+      WITH_ONLY_ACTIONS_CI: 0,
+      WITH_ONLY_EXTERNAL_CI: 0,
+      WITH_SUCCESS_COMMITS: 0,
+      WITHOUT_CI: 0,
+    };
   }
 
   async fetchPullRequest(repoOwner: string, repoName: string) {
@@ -78,16 +82,15 @@ export class PullRequest {
       if (node?.commit) {
         const isUsingExternalCI = !!node.commit.status?.state;
 
-        const isUsingActions = node.commit.checkSuites.nodes.some(
+        const filteredCheckSuites = node.commit.checkSuites.nodes.filter(
           ({ app }) => app?.name === GITHUB_ACTIONS_KEY,
         );
 
         const hasExternalCISucceeded =
           node.commit.status?.state === SUCCESS_KEY;
 
-        const hasActionsSucceeded = node.commit.checkSuites.nodes.every(
-          ({ app, conclusion }) =>
-            app?.name === GITHUB_ACTIONS_KEY && conclusion === SUCCESS_KEY,
+        const hasActionsSucceeded = filteredCheckSuites.every(
+          ({ conclusion }) => conclusion === SUCCESS_KEY,
         );
 
         const processPRStatuses = (PrObject: PullRequestStatuses) => {
@@ -98,33 +101,25 @@ export class PullRequest {
           // 3 - Not Using External CI && Using Actions
           // 4 - Not Using External CI && Not Using Actions
 
-          if (!isUsingExternalCI && !isUsingActions) {
+          if (!isUsingExternalCI && !filteredCheckSuites.length) {
             PrObject.WITHOUT_CI += 1;
-            return;
-          }
-
-          if (hasExternalCISucceeded && hasActionsSucceeded) {
+          } else if (hasExternalCISucceeded && hasActionsSucceeded) {
             PrObject.WITH_SUCCESS_COMMITS += 1;
-            return;
-          }
-
-          if (hasExternalCISucceeded && !hasActionsSucceeded) {
+          } else if (hasExternalCISucceeded && !hasActionsSucceeded) {
             PrObject.WITH_ONLY_EXTERNAL_CI += 1;
-            return;
-          }
-
-          if (!hasExternalCISucceeded && hasActionsSucceeded) {
+          } else if (!hasExternalCISucceeded && hasActionsSucceeded) {
             PrObject.WITH_ONLY_ACTIONS_CI += 1;
-            return;
-          }
-
-          if (!hasExternalCISucceeded && !hasActionsSucceeded) {
+          } else {
             PrObject.WITH_FAILED_COMMITS += 1;
           }
         };
 
-        if (isPrMerged) processPRStatuses(this.NUM_OF_MERGED_PR_STATUSES);
-        else processPRStatuses(this.NUM_OF_CLOSED_PR_STATUSES);
+        if (isPrMerged) {
+          processPRStatuses(this.NUM_OF_MERGED_PR_STATUSES);
+          return;
+        }
+
+        processPRStatuses(this.NUM_OF_CLOSED_PR_STATUSES);
       }
     });
 
