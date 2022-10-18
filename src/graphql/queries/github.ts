@@ -2,6 +2,9 @@ import { gql } from 'graphql-request';
 
 type PullRequestsNode = {
   merged: boolean;
+  number: number;
+  createdAt: string;
+  closedAt: string;
   commits: {
     nodes: {
       commit: {
@@ -54,7 +57,8 @@ export const searchPullRequest = gql`
           ... on PullRequest {
             number
             merged
-            title
+            createdAt
+            closedAt
             commits(last: 1) {
               nodes {
                 commit {

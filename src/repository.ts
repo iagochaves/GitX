@@ -14,7 +14,7 @@ export class Repository {
 
   constructor() {
     this.writableStream = fs.createWriteStream(
-      resolve(__dirname, 'documents/generated', 'generated.csv'),
+      resolve(__dirname, '../documents/generated', 'generated.csv'),
     );
 
     this.stringifier = stringify({ header: true });
@@ -22,7 +22,7 @@ export class Repository {
 
   async *readRepositories() {
     const reposFileData = fs.readFileSync(
-      resolve(__dirname, 'documents', 'repos.txt'),
+      resolve(__dirname, '../documents', 'repos.txt'),
       { encoding: 'utf8' },
     );
 

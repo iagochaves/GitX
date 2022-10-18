@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "dev": "ts-node-dev --transpile-only --ignore-watch node_modules src/index.ts",
+    "build": "tsup src/index.ts --format cjs",
+    "dev": "yarn build && node dist/index.js",
     "generate": "graphql-codegen --config codegen.yml"
   },
   "keywords": [],
@@ -23,11 +23,12 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.7.1",
-    "ts-node-dev": "^2.0.0",
+    "tsup": "^6.3.0",
     "typescript": "*"
   },
   "dependencies": {
     "csv-stringify": "^6.2.0",
+    "dayjs": "^1.11.5",
     "dotenv": "^16.0.2",
     "graphql": "^16.6.0",
     "graphql-request": "^5.0.0"
