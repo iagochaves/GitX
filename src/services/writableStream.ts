@@ -13,20 +13,15 @@ export class WritableStream {
     );
 
     this.stringifier = stringify({ header: true });
+    this.stringifier.on('close', () => this.writableStream.close());
   }
 
-  write(data: any) {
+  write(data: unknown) {
     this.stringifier.write(data);
   }
 
   pipe() {
-    const piped = this.stringifier.pipe(this.writableStream, { end: true });
-    piped.on('finish', () => console.log('FINISHED PIPE'));
-    piped.on('close', () => console.log('CLOSED PIPE'));
-    piped.on('unpipe', () => console.log('UNPIPED PIPE'));
-  }
-
-  close() {
-    this.writableStream.close();
+    this.stringifier.pipe(this.writableStream, { end: true });
+    this.stringifier.end();
   }
 }

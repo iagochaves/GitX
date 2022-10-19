@@ -8,10 +8,10 @@ export type PullRequestData = {
   closedAt: string;
   createdAt: string;
   id: number;
-  isCommitSuccessfull: string;
-  isMerged: string;
-  isUsingActions: string;
-  isUsingExternalCI: string;
+  isCommitSuccessfull: boolean;
+  isMerged: boolean;
+  isUsingActions: boolean;
+  isUsingExternalCI: boolean;
   resolveTimeInHours: number;
 };
 const SUCCESS_KEY = 'SUCCESS';
@@ -24,13 +24,13 @@ export class PullRequest {
 
   private id: number;
 
-  private isCommitSuccessfull: string;
+  private isCommitSuccessfull: boolean;
 
-  private isMerged: string;
+  private isMerged: boolean;
 
-  private isUsingActions: string;
+  private isUsingActions: boolean;
 
-  private isUsingExternalCI: string;
+  private isUsingExternalCI: boolean;
 
   private resolveTimeInHours: number;
 
@@ -38,10 +38,10 @@ export class PullRequest {
     this.closedAt = '';
     this.createdAt = '';
     this.id = 0;
-    this.isCommitSuccessfull = '';
-    this.isMerged = '';
-    this.isUsingActions = '';
-    this.isUsingExternalCI = '';
+    this.isCommitSuccessfull = false;
+    this.isMerged = false;
+    this.isUsingActions = false;
+    this.isUsingExternalCI = false;
     this.resolveTimeInHours = 0;
   }
 
@@ -107,11 +107,11 @@ export class PullRequest {
     this.closedAt = formatDate(closedAt);
     this.createdAt = formatDate(createdAt);
     this.id = number;
-    this.isCommitSuccessfull = String(getCommitStatus());
-    this.isMerged = String(merged);
-    this.isUsingActions = String(filteredCheckSuites.length > 0);
-    this.isUsingExternalCI = String(isUsingExternalCI);
-    this.resolveTimeInHours = Number(prLifetime.toFixed(1));
+    this.isCommitSuccessfull = getCommitStatus();
+    this.isMerged = merged;
+    this.isUsingActions = filteredCheckSuites.length > 0;
+    this.isUsingExternalCI = isUsingExternalCI;
+    this.resolveTimeInHours = +prLifetime.toFixed(1);
     return this.getData();
   }
 }

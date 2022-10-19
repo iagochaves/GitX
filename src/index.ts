@@ -12,6 +12,8 @@ async function main(): Promise<void> {
 
     const repository = new Repository(repositoryName);
     await repository.readPullRequests();
+
+    repositoryList.add(repository);
   });
 }
 

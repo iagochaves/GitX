@@ -8,6 +8,7 @@ import {
 import client from './lib/graphqlClient';
 import { PullRequest, PullRequestData } from './pullRequest';
 import { WritableStream } from './services/writableStream';
+import { formatObjectData } from './utils/formatObjectData';
 
 type PullRequestStatuses = {
   WITH_FAILED_COMMITS: number;
@@ -284,7 +285,8 @@ export class Repository {
           const data = pr.proccessNext(pullRequest);
           this.add(data);
 
-          this.writableStream.write(data);
+          const dataForCSV = formatObjectData(data);
+          this.writableStream.write(dataForCSV);
         }
       });
 
