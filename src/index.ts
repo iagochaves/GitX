@@ -1,31 +1,18 @@
 /* eslint-disable no-restricted-syntax */
-import { PullRequest } from './pullRequest';
 import { Repository } from './repository';
+import { RepositoryList } from './repositoryList';
 
 async function main(): Promise<void> {
-  const NUM_OF_PRS = 100;
-  const repository = new Repository();
-  let promisesStack = [];
+  const repositoryList = new RepositoryList();
 
-  for await (const data of repository.readRepositories()) {
-    console.log('Fetching for -> ', data);
-    const pullRequest = new PullRequest(NUM_OF_PRS);
+  const repositories = repositoryList.readRepositories();
 
-    const pullRequestPromise = new Promise((resolve) =>
-      // eslint-disable-next-line no-promise-executor-return
-      resolve(pullRequest.fetchPullRequest(data)),
-    );
-    promisesStack.push(pullRequestPromise);
+  repositories.forEach(async (repositoryName) => {
+    console.log('Fetching data for ->', repositoryName);
 
-    if (promisesStack.length % 2 === 0) {
-      const responses = await Promise.all(promisesStack);
-      console.log(responses);
-      responses.forEach((response) =>
-        repository.writePullRequestResult(response),
-      );
-      promisesStack = [];
-    }
-  }
+    const repository = new Repository(repositoryName);
+    await repository.readPullRequests();
+  });
 }
 
 main();
