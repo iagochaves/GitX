@@ -1,3 +1,4 @@
+/* eslint-disable no-lonely-if */
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-await-in-loop */
@@ -12,8 +13,10 @@ import { formatObjectData } from './utils/formatObjectData';
 
 type PullRequestStatuses = {
   WITH_FAILED_COMMITS: number;
-  WITH_ONLY_ACTIONS_CI: number;
-  WITH_ONLY_EXTERNAL_CI: number;
+  WITH_ONLY_VALIDATED_ACTIONS_CI: number;
+  WITH_ONLY_FAILED_ACTIONS_CI: number;
+  WITH_ONLY_VALIDATED_EXTERNAL_CI: number;
+  WITH_ONLY_FAILED_EXTERNAL_CI: number;
   WITH_SUCCESS_COMMITS: number;
   WITHOUT_CI: number;
 };
@@ -51,15 +54,19 @@ export class Repository {
 
     this.NUM_OF_MERGED_PR_STATUSES = {
       WITH_FAILED_COMMITS: 0,
-      WITH_ONLY_ACTIONS_CI: 0,
-      WITH_ONLY_EXTERNAL_CI: 0,
+      WITH_ONLY_VALIDATED_ACTIONS_CI: 0,
+      WITH_ONLY_FAILED_ACTIONS_CI: 0,
+      WITH_ONLY_VALIDATED_EXTERNAL_CI: 0,
+      WITH_ONLY_FAILED_EXTERNAL_CI: 0,
       WITH_SUCCESS_COMMITS: 0,
       WITHOUT_CI: 0,
     };
     this.NUM_OF_CLOSED_PR_STATUSES = {
       WITH_FAILED_COMMITS: 0,
-      WITH_ONLY_ACTIONS_CI: 0,
-      WITH_ONLY_EXTERNAL_CI: 0,
+      WITH_ONLY_VALIDATED_ACTIONS_CI: 0,
+      WITH_ONLY_FAILED_ACTIONS_CI: 0,
+      WITH_ONLY_VALIDATED_EXTERNAL_CI: 0,
+      WITH_ONLY_FAILED_EXTERNAL_CI: 0,
       WITH_SUCCESS_COMMITS: 0,
       WITHOUT_CI: 0,
     };
@@ -106,48 +113,56 @@ export class Repository {
     };
 
     const mergedPRNum = {
-      'Merged PR With Failed Commits using both':
+      'Accepted PR With Failed Commits using both':
         this.NUM_OF_MERGED_PR_STATUSES.WITH_FAILED_COMMITS,
-      'Merged PR With Success Commits using both':
+      'Accepted PR With Success Commits using both':
         this.NUM_OF_MERGED_PR_STATUSES.WITH_SUCCESS_COMMITS,
-      'Merged PR With Only passing GitHub Actions':
-        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_ACTIONS_CI,
-      'Merged PR With Only passing External CIs':
-        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_EXTERNAL_CI,
-      'Merged PR With No CI': this.NUM_OF_MERGED_PR_STATUSES.WITHOUT_CI,
+      'Accepted PR With Only passing successfull GitHub Actions':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_VALIDATED_ACTIONS_CI,
+      'Accepted PR With Only passing failed GitHub Actions':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_FAILED_ACTIONS_CI,
+      'Accepted PR With Only passing successfull External CIs':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_VALIDATED_EXTERNAL_CI,
+      'Accepted PR With Only passing failed External CIs':
+        this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_FAILED_EXTERNAL_CI,
+      'Accepted PR With No CI': this.NUM_OF_MERGED_PR_STATUSES.WITHOUT_CI,
     };
 
     const closedPRNum = {
-      'Closed PR With Failed Commits using both':
+      'Not Accepted PR With Failed Commits using both':
         this.NUM_OF_CLOSED_PR_STATUSES.WITH_FAILED_COMMITS,
-      'Closed PR With Success Commits using both':
+      'Not Accepted PR With Success Commits using both':
         this.NUM_OF_CLOSED_PR_STATUSES.WITH_SUCCESS_COMMITS,
-      'Closed PR With Only passing GitHub Actions':
-        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_ACTIONS_CI,
-      'Closed PR With Only passing External CIs':
-        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_EXTERNAL_CI,
-      'Closed PR With No CI': this.NUM_OF_CLOSED_PR_STATUSES.WITHOUT_CI,
+      'Not Accepted PR With Only passing successfull GitHub Actions':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_VALIDATED_ACTIONS_CI,
+      'Not Accepted PR With Only passing failed GitHub Actions':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_FAILED_ACTIONS_CI,
+      'Not Accepted PR With Only passing successfull External CIs':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_VALIDATED_EXTERNAL_CI,
+      'Not Accepted PR With Only passing failed External CIs':
+        this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_FAILED_EXTERNAL_CI,
+      'Not Accepted PR With No CI': this.NUM_OF_CLOSED_PR_STATUSES.WITHOUT_CI,
     };
 
     const mergedPRLifecycle = {
-      'Avg. PR Resolution Time for Merged PR passing Actions and External CI validation (hours)':
+      'Avg. PR Resolution Time for Accepted PR passing Actions and External CI validation (hours)':
         (
           this.TOTAL_MERGED_PR_LIFE_TIME_STATUSES
             .WITH_BOTH_ACTIONS_EXTERNAL_CI /
           this.NUM_OF_MERGED_PR_STATUSES.WITH_SUCCESS_COMMITS
         ).toFixed(1),
-      'Avg. PR Resolution Time for Merged PR passing only Actions validation (hours)':
+      'Avg. PR Resolution Time for Accepted PR passing only Actions validation (hours)':
         (
           this.TOTAL_MERGED_PR_LIFE_TIME_STATUSES.WITH_ONLY_PASSING_ACTIONS_CI /
-          this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_ACTIONS_CI
+          this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_VALIDATED_ACTIONS_CI
         ).toFixed(1),
-      'Avg. PR Resolution Time for Merged PR passing only External CI validation (hours)':
+      'Avg. PR Resolution Time for Accepted PR passing only External CI validation (hours)':
         (
           this.TOTAL_MERGED_PR_LIFE_TIME_STATUSES
             .WITH_ONLY_PASSING_EXTERNAL_CI /
-          this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_EXTERNAL_CI
+          this.NUM_OF_MERGED_PR_STATUSES.WITH_ONLY_VALIDATED_EXTERNAL_CI
         ).toFixed(1),
-      'Avg. PR Resolution Time for Merged PR without passing validation (hours)':
+      'Avg. PR Resolution Time for Accepted PR without passing validation (hours)':
         (
           this.TOTAL_MERGED_PR_LIFE_TIME_STATUSES.WITHOUT_CI /
           this.NUM_OF_MERGED_PR_STATUSES.WITHOUT_CI
@@ -155,24 +170,24 @@ export class Repository {
     };
 
     const closedPRLifecycle = {
-      'Avg. PR Resolution Time for Closed PR passing Actions and External CI validation (hours)':
+      'Avg. PR Resolution Time for Not Accepted PR passing Actions and External CI validation (hours)':
         (
           this.TOTAL_CLOSED_PR_LIFE_TIME_STATUSES
             .WITH_BOTH_ACTIONS_EXTERNAL_CI /
           this.NUM_OF_CLOSED_PR_STATUSES.WITH_SUCCESS_COMMITS
         ).toFixed(1),
-      'Avg. PR Resolution Time for Closed PR passing only Actions validation (hours)':
+      'Avg. PR Resolution Time for Not Accepted PR passing only Actions validation (hours)':
         (
           this.TOTAL_CLOSED_PR_LIFE_TIME_STATUSES.WITH_ONLY_PASSING_ACTIONS_CI /
-          this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_ACTIONS_CI
+          this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_VALIDATED_ACTIONS_CI
         ).toFixed(1),
-      'Avg. PR Resolution Time for Closed PR passing only External CI validation (hours)':
+      'Avg. PR Resolution Time for Not Accepted PR passing only External CI validation (hours)':
         (
           this.TOTAL_CLOSED_PR_LIFE_TIME_STATUSES
             .WITH_ONLY_PASSING_EXTERNAL_CI /
-          this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_EXTERNAL_CI
+          this.NUM_OF_CLOSED_PR_STATUSES.WITH_ONLY_VALIDATED_EXTERNAL_CI
         ).toFixed(1),
-      'Avg. PR Resolution Time for Closed PR without passing validation (hours)':
+      'Avg. PR Resolution Time for Not Accepted PR without passing validation (hours)':
         (
           this.TOTAL_CLOSED_PR_LIFE_TIME_STATUSES.WITHOUT_CI /
           this.NUM_OF_CLOSED_PR_STATUSES.WITHOUT_CI
@@ -224,10 +239,14 @@ export class Repository {
 
         PrLifetimeObject.WITH_BOTH_ACTIONS_EXTERNAL_CI += resolveTimeInHours;
       } else if (isUsingExternalCI && !isUsingActions) {
-        PrObject.WITH_ONLY_EXTERNAL_CI += 1;
+        // Only Using External CI
+        if (isCommitSuccessfull) PrObject.WITH_ONLY_VALIDATED_EXTERNAL_CI += 1;
+        else PrObject.WITH_ONLY_FAILED_EXTERNAL_CI += 1;
         PrLifetimeObject.WITH_ONLY_PASSING_EXTERNAL_CI += resolveTimeInHours;
       } else {
-        PrObject.WITH_ONLY_ACTIONS_CI += 1;
+        // Only Using Actions CI
+        if (isCommitSuccessfull) PrObject.WITH_ONLY_VALIDATED_ACTIONS_CI += 1;
+        else PrObject.WITH_ONLY_FAILED_ACTIONS_CI += 1;
         PrLifetimeObject.WITH_ONLY_PASSING_ACTIONS_CI += resolveTimeInHours;
       }
     };
@@ -264,6 +283,7 @@ export class Repository {
     };
 
     do {
+      console.log('Fetching Page -> ', nextCursor);
       const response = await fetchPullRequest();
       const { endCursor, hasNextPage } =
         response.repository.pullRequests.pageInfo;
