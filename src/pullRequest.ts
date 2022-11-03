@@ -34,6 +34,8 @@ export class PullRequest {
 
   private resolveTimeInHours: number;
 
+  private url: string;
+
   constructor() {
     this.closedAt = '';
     this.createdAt = '';
@@ -43,6 +45,7 @@ export class PullRequest {
     this.isUsingActions = false;
     this.isUsingExternalCI = false;
     this.resolveTimeInHours = 0;
+    this.url = '';
   }
 
   getData(): PullRequestData {
@@ -52,6 +55,20 @@ export class PullRequest {
       createdAt: this.createdAt,
       closedAt: this.closedAt,
       resolveTimeInHours: this.resolveTimeInHours,
+      isUsingActions: this.isUsingActions,
+      isUsingExternalCI: this.isUsingExternalCI,
+      isCommitSuccessfull: this.isCommitSuccessfull,
+    };
+  }
+
+  getCSVFields() {
+    return {
+      id: this.id,
+      'Pull Request Url': this.url,
+      Accepted: this.isMerged,
+      createdAt: this.createdAt,
+      closedAt: this.closedAt,
+      'Resolution Time': this.resolveTimeInHours,
       isUsingActions: this.isUsingActions,
       isUsingExternalCI: this.isUsingExternalCI,
       isCommitSuccessfull: this.isCommitSuccessfull,
@@ -76,7 +93,7 @@ export class PullRequest {
   }
 
   proccessNext(data: PullRequestsNode) {
-    const { closedAt, commits, createdAt, merged, number } = data;
+    const { closedAt, commits, createdAt, merged, number, url } = data;
     const [{ commit }] = commits.nodes;
 
     const prLifetime = dayjs(closedAt).diff(createdAt, 'hour', true);
@@ -112,6 +129,7 @@ export class PullRequest {
     this.isUsingActions = filteredCheckSuites.length > 0;
     this.isUsingExternalCI = isUsingExternalCI;
     this.resolveTimeInHours = +prLifetime.toFixed(1);
+    this.url = url;
     return this.getData();
   }
 }

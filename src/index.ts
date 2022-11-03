@@ -7,14 +7,14 @@ async function main(): Promise<void> {
 
   const repositories = repositoryList.readRepositories();
 
-  repositories.forEach(async (repositoryName) => {
+  for await (const repositoryName of repositories) {
     console.log('Fetching data for ->', repositoryName);
 
     const repository = new Repository(repositoryName);
     await repository.readPullRequests();
 
     repositoryList.add(repository);
-  });
+  }
 }
 
 main();

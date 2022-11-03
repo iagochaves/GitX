@@ -1,11 +1,12 @@
 import { gql } from 'graphql-request';
 
 export type PullRequestsNode = {
+  closedAt: string;
+  createdAt: string;
   merged: boolean;
   number: number;
   title: string;
-  createdAt: string;
-  closedAt: string;
+  url: string;
   comments: {
     totalCount: number;
   };
@@ -71,6 +72,7 @@ export const fetchPullRequestQuery = gql`
           endCursor
         }
         nodes {
+          url
           number
           merged
           comments {

@@ -38,7 +38,6 @@ export class RepositoryList {
     const data = repository.getData();
     this.writableStream.write(data);
 
-    console.log('REPO DATA', data);
     if (this.repositories.length === this.TOTAL_REPOS) {
       this.writableStream.pipe();
     }

@@ -264,7 +264,6 @@ export class Repository {
     };
 
     do {
-      console.log('Fetching Page -> ', nextCursor);
       const response = await fetchPullRequest();
       const { endCursor, hasNextPage } =
         response.repository.pullRequests.pageInfo;
@@ -285,7 +284,7 @@ export class Repository {
           const data = pr.proccessNext(pullRequest);
           this.add(data);
 
-          const dataForCSV = formatObjectData(data);
+          const dataForCSV = formatObjectData(pr.getCSVFields());
           this.writableStream.write(dataForCSV);
         }
       });
