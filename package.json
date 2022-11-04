@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsup src/index.ts --format cjs",
     "dev": "yarn build && node dist/index.js",
-    "generate": "graphql-codegen --config codegen.yml"
+    "generate": "graphql-codegen --config codegen.yml",
+    "init:server": "npx github-proxy-server -p 3334 --tokens documents/tokens.txt"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +28,7 @@
     "typescript": "*"
   },
   "dependencies": {
+    "@gittrends-app/github-proxy-server": "gittrends-app/github-proxy-server",
     "csv-stringify": "^6.2.0",
     "dayjs": "^1.11.5",
     "dotenv": "^16.0.2",

@@ -267,7 +267,7 @@ export class Repository {
   async readPullRequests() {
     const [repoOwner, repoName] = this.REPO_NAME.split('/');
     let nextCursor: string | undefined;
-    const MAX_NUM_PR_PER_REQUEST = 100;
+    const MAX_NUM_PR_PER_REQUEST = 75;
 
     const fetchPullRequest = async () => {
       const response = await client.request<FetchPullRequestQueryResult>(
@@ -283,8 +283,13 @@ export class Repository {
     };
 
     do {
-      console.log('Fetching Page -> ', nextCursor);
       const response = await fetchPullRequest();
+      console.log(
+        'Current PR -> ',
+        this.NUM_OF_PRS,
+        ' For -> ',
+        `${repoOwner}/${repoName}`,
+      );
       const { endCursor, hasNextPage } =
         response.repository.pullRequests.pageInfo;
 

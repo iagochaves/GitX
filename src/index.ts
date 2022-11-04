@@ -7,14 +7,23 @@ async function main(): Promise<void> {
 
   const repositories = repositoryList.readRepositories();
 
-  for await (const repositoryName of repositories) {
-    console.log('Fetching data for ->', repositoryName);
+  repositories.forEach((repositoryName, index) => {
+    setTimeout(() => {
+      console.log('Fetching data for ->', repositoryName);
 
-    const repository = new Repository(repositoryName);
-    await repository.readPullRequests();
+      const repository = new Repository(repositoryName);
+      repository.readPullRequests().then(() => repositoryList.add(repository));
+    }, 5000 * (index + 1));
+  });
 
-    repositoryList.add(repository);
-  }
+  // for await (const repositoryName of repositories) {
+  //   console.log('Fetching data for ->', repositoryName);
+
+  //   const repository = new Repository(repositoryName);
+  //   await repository.readPullRequests();
+
+  //   repositoryList.add(repository);
+  // }
 }
 
 main();
