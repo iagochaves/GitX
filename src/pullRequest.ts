@@ -106,9 +106,9 @@ export class PullRequest {
       ({ app }) => app?.name === GITHUB_ACTIONS_KEY,
     );
 
-    const hasActionsSucceeded = filteredCheckSuites.every(
-      ({ conclusion }) => conclusion === SUCCESS_KEY,
-    );
+    const hasActionsSucceeded =
+      filteredCheckSuites.length > 0 &&
+      filteredCheckSuites.every(({ conclusion }) => conclusion === SUCCESS_KEY);
 
     const getCommitStatus = () => {
       if (isUsingExternalCI && filteredCheckSuites.length > 0)

@@ -305,7 +305,9 @@ export class Repository {
         } = pullRequest;
         const pr = new PullRequest();
 
-        if (pr.isValid(title, nodes.length, comments.totalCount)) {
+        if (
+          pr.isValid(title.toLowerCase(), nodes.length, comments.totalCount)
+        ) {
           const data = pr.proccessNext(pullRequest);
           this.add(data);
 
