@@ -11,9 +11,16 @@ export class RepositoryList {
 
   private repositories: Repository[];
 
+  private resolutionTimeStream: WritableStream;
+
   constructor() {
     this.repositories = [];
-    this.writableStream = new WritableStream('repositories');
+    this.writableStream = new WritableStream('repositories2');
+    this.resolutionTimeStream = new WritableStream('time-resolution');
+  }
+
+  get resolutionWritableStream() {
+    return this.resolutionTimeStream;
   }
 
   readRepositories() {
@@ -40,6 +47,7 @@ export class RepositoryList {
 
     if (this.repositories.length === this.TOTAL_REPOS) {
       this.writableStream.pipe();
+      this.resolutionTimeStream.pipe();
     }
   }
 }

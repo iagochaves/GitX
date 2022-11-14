@@ -103,7 +103,7 @@ export class PullRequest {
     const hasExternalCISucceeded = commit.status?.state === SUCCESS_KEY;
 
     const filteredCheckSuites = commit.checkSuites.nodes.filter(
-      ({ app }) => app?.name === GITHUB_ACTIONS_KEY,
+      (node) => node?.app?.name === GITHUB_ACTIONS_KEY,
     );
 
     const hasActionsSucceeded =

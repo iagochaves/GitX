@@ -1,1 +1,14 @@
 aws/aws-sdk-js-v3
+pallets/flask
+serverless/serverless
+strapi/strapi
+vercel/next.js
+sveltejs/svelte
+spring-projects/spring-framework
+redis/redis
+django/django
+nodejs/node
+facebook/jest
+storybookjs/storybook
+mrdoob/three.js
+gatsbyjs/gatsby

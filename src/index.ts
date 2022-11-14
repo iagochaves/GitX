@@ -7,23 +7,45 @@ async function main(): Promise<void> {
 
   const repositories = repositoryList.readRepositories();
 
-  repositories.forEach((repositoryName, index) => {
-    setTimeout(() => {
-      console.log('Fetching data for ->', repositoryName);
+  const repositoriesQueue: string[][] = [];
 
-      const repository = new Repository(repositoryName);
-      repository.readPullRequests().then(() => repositoryList.add(repository));
-    }, 5000 * (index + 1));
-  });
+  while (repositories.length) {
+    const nextQueue = repositories.splice(0, 3);
+    repositoriesQueue.push(nextQueue);
+  }
 
-  // for await (const repositoryName of repositories) {
-  //   console.log('Fetching data for ->', repositoryName);
+  for await (const repositoryQueue of repositoriesQueue) {
+    const fetchQueue: Promise<Repository>[] = repositoryQueue.map(
+      (repositoryName) => {
+        return new Promise((resolve) => {
+          console.log('Fetching data for ->', repositoryName);
 
-  //   const repository = new Repository(repositoryName);
-  //   await repository.readPullRequests();
+          const repository = new Repository(
+            repositoryName,
+            repositoryList.resolutionWritableStream,
+          );
 
-  //   repositoryList.add(repository);
-  // }
+          repository.readPullRequests().then(() => resolve(repository));
+        });
+      },
+    );
+
+    const repositoriesData = await Promise.all(fetchQueue);
+    repositoriesData.forEach((repository) => repositoryList.add(repository));
+  }
+  // repositories.forEach((repositoryName, index) => {
+  //   setTimeout(() => {
+  //     console.log('Fetching data for ->', repositoryName);
+
+  //     const repository = new Repository(
+  //       repositoryName,
+  //       repositoryList.resolutionWritableStream,
+  //     );
+  //     repository.readPullRequests().then(() => {
+  //       repositoryList.add(repository);
+  //     });
+  //   }, 5000 * (index + 1));
+  // });
 }
 
 main();

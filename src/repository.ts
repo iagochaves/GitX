@@ -47,10 +47,13 @@ export class Repository {
 
   private writableStream: WritableStream;
 
-  constructor(repositoryName: string) {
+  private resolutionTimeStream: WritableStream;
+
+  constructor(repositoryName: string, resolutionTimeStream: WritableStream) {
     this.REPO_NAME = repositoryName;
+    this.resolutionTimeStream = resolutionTimeStream;
     const [repoOwner, repoName] = this.REPO_NAME.split('/');
-    this.writableStream = new WritableStream(`${repoOwner}-${repoName}`);
+    this.writableStream = new WritableStream(`repos/${repoOwner}-${repoName}`);
 
     this.NUM_OF_MERGED_PR_STATUSES = {
       WITH_FAILED_COMMITS: 0,
@@ -267,7 +270,7 @@ export class Repository {
   async readPullRequests() {
     const [repoOwner, repoName] = this.REPO_NAME.split('/');
     let nextCursor: string | undefined;
-    const MAX_NUM_PR_PER_REQUEST = 75;
+    const MAX_NUM_PR_PER_REQUEST = 50;
 
     const fetchPullRequest = async () => {
       const response = await client.request<FetchPullRequestQueryResult>(
@@ -310,6 +313,23 @@ export class Repository {
         ) {
           const data = pr.proccessNext(pullRequest);
           this.add(data);
+
+          // Only Actions
+          if (data.isUsingActions && !data.isUsingExternalCI) {
+            const resolutionData = {
+              ActionsCI: data.resolveTimeInHours,
+              ExternalCI: 0,
+            };
+            this.resolutionTimeStream.write(formatObjectData(resolutionData));
+          }
+          // Only Using External CI
+          else if (!data.isUsingActions && data.isUsingExternalCI) {
+            const resolutionData = {
+              ActionsCI: 0,
+              ExternalCI: data.resolveTimeInHours,
+            };
+            this.resolutionTimeStream.write(formatObjectData(resolutionData));
+          }
 
           const dataForCSV = formatObjectData(pr.getCSVFields());
           this.writableStream.write(dataForCSV);
