@@ -7,12 +7,14 @@ export class WritableStream {
 
   private writableStream: fs.WriteStream;
 
-  constructor(fileName: string) {
+  constructor(fileName: string, columns?: string[]) {
     this.writableStream = fs.createWriteStream(
       resolve(__dirname, `../documents/generated`, `${fileName}.csv`),
     );
 
-    this.stringifier = stringify({ header: true });
+    this.stringifier = stringify(
+      columns ? { header: true, columns } : { header: true },
+    );
     this.stringifier.on('close', () => this.writableStream.close());
   }
 

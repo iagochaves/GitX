@@ -2,6 +2,8 @@
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-await-in-loop */
+
+import fs from 'node:fs';
 import {
   fetchPullRequestQuery,
   FetchPullRequestQueryResult,
@@ -47,11 +49,22 @@ export class Repository {
 
   private writableStream: WritableStream;
 
-  private resolutionTimeStream: WritableStream;
+  private actionsStream: fs.WriteStream;
 
-  constructor(repositoryName: string, resolutionTimeStream: WritableStream) {
+  private externalCiStream: fs.WriteStream;
+
+  private noCiStream: fs.WriteStream;
+
+  constructor(
+    repositoryName: string,
+    actionsStream: fs.WriteStream,
+    externalCiStream: fs.WriteStream,
+    noCiStream: fs.WriteStream,
+  ) {
+    this.actionsStream = actionsStream;
+    this.externalCiStream = externalCiStream;
+    this.noCiStream = noCiStream;
     this.REPO_NAME = repositoryName;
-    this.resolutionTimeStream = resolutionTimeStream;
     const [repoOwner, repoName] = this.REPO_NAME.split('/');
     this.writableStream = new WritableStream(`repos/${repoOwner}-${repoName}`);
 
@@ -316,19 +329,15 @@ export class Repository {
 
           // Only Actions
           if (data.isUsingActions && !data.isUsingExternalCI) {
-            const resolutionData = {
-              ActionsCI: data.resolveTimeInHours,
-              ExternalCI: 0,
-            };
-            this.resolutionTimeStream.write(formatObjectData(resolutionData));
+            this.actionsStream.write(`${data.resolveTimeInHours}\n`);
           }
           // Only Using External CI
           else if (!data.isUsingActions && data.isUsingExternalCI) {
-            const resolutionData = {
-              ActionsCI: 0,
-              ExternalCI: data.resolveTimeInHours,
-            };
-            this.resolutionTimeStream.write(formatObjectData(resolutionData));
+            this.externalCiStream.write(`${data.resolveTimeInHours}\n`);
+          }
+          // No CI
+          else if (!data.isUsingActions && !data.isUsingExternalCI) {
+            this.noCiStream.write(`${data.resolveTimeInHours}\n`);
           }
 
           const dataForCSV = formatObjectData(pr.getCSVFields());

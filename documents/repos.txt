@@ -1,4 +1,3 @@
-aws/aws-sdk-js-v3
 pallets/flask
 serverless/serverless
 strapi/strapi

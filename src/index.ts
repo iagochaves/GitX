@@ -17,15 +17,17 @@ async function main(): Promise<void> {
   for await (const repositoryQueue of repositoriesQueue) {
     const fetchQueue: Promise<Repository>[] = repositoryQueue.map(
       (repositoryName) => {
-        return new Promise((resolve) => {
+        return new Promise((pResolve) => {
           console.log('Fetching data for ->', repositoryName);
 
           const repository = new Repository(
             repositoryName,
-            repositoryList.resolutionWritableStream,
+            repositoryList.getActionsStream,
+            repositoryList.getExternalStream,
+            repositoryList.getNoCIStream,
           );
 
-          repository.readPullRequests().then(() => resolve(repository));
+          repository.readPullRequests().then(() => pResolve(repository));
         });
       },
     );
@@ -33,19 +35,6 @@ async function main(): Promise<void> {
     const repositoriesData = await Promise.all(fetchQueue);
     repositoriesData.forEach((repository) => repositoryList.add(repository));
   }
-  // repositories.forEach((repositoryName, index) => {
-  //   setTimeout(() => {
-  //     console.log('Fetching data for ->', repositoryName);
-
-  //     const repository = new Repository(
-  //       repositoryName,
-  //       repositoryList.resolutionWritableStream,
-  //     );
-  //     repository.readPullRequests().then(() => {
-  //       repositoryList.add(repository);
-  //     });
-  //   }, 5000 * (index + 1));
-  // });
 }
 
 main();

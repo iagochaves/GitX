@@ -11,16 +11,39 @@ export class RepositoryList {
 
   private repositories: Repository[];
 
-  private resolutionTimeStream: WritableStream;
+  private actionsStream: fs.WriteStream;
+
+  private externalStream: fs.WriteStream;
+
+  private noCIStream: fs.WriteStream;
 
   constructor() {
     this.repositories = [];
     this.writableStream = new WritableStream('repositories2');
-    this.resolutionTimeStream = new WritableStream('time-resolution');
+
+    this.actionsStream = fs.createWriteStream(
+      resolve(__dirname, '../documents/generated', 'actions.txt'),
+    );
+
+    this.externalStream = fs.createWriteStream(
+      resolve(__dirname, '../documents/generated', 'external-ci.txt'),
+    );
+
+    this.noCIStream = fs.createWriteStream(
+      resolve(__dirname, '../documents/generated', 'no-ci.txt'),
+    );
   }
 
-  get resolutionWritableStream() {
-    return this.resolutionTimeStream;
+  get getActionsStream() {
+    return this.actionsStream;
+  }
+
+  get getExternalStream() {
+    return this.externalStream;
+  }
+
+  get getNoCIStream() {
+    return this.noCIStream;
   }
 
   readRepositories() {
@@ -47,7 +70,7 @@ export class RepositoryList {
 
     if (this.repositories.length === this.TOTAL_REPOS) {
       this.writableStream.pipe();
-      this.resolutionTimeStream.pipe();
+      // this.resolutionTimeStream.pipe();
     }
   }
 }
